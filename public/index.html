@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đối tác mẫu — GPMPay Widget connect</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="{{WIDGET_SCRIPT_URL}}"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Phần mềm bán hàng ABC <small>(đối tác mẫu)</small></h1>
+      <p id="config-warning" class="warning" hidden></p>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="connect">Kết nối</button>
+      <button type="button" role="tab" data-tab="accounts">Tài khoản ngân hàng</button>
+      <button type="button" role="tab" data-tab="billing">Thanh toán</button>
+      <button type="button" role="tab" data-tab="webhooks">Webhook</button>
+    </nav>
+
+    <main>
+      <div class="panel" id="tab-connect" role="tabpanel">
+        <section>
+          <h2>Kết nối ngân hàng</h2>
+          <form id="connect-form">
+            <label>Email người dùng <input name="email" type="email" required value="khach@example.com" /></label>
+            <label>Tên <input name="name" value="Nguyen Van A" /></label>
+            <label>SĐT <input name="phone" value="0912345678" /></label>
+            <p class="hint">Người dùng chọn ngân hàng và loại tài khoản ngay trong widget. Kết nối không tạo bill: STK không được dùng thử thì tạo bill gia hạn ở tab Tài khoản ngân hàng.</p>
+            <label class="inline"><input type="checkbox" name="autoWebhook" checked /> Tạo webhook tự động về <code id="webhook-url"></code></label>
+            <button type="submit">Kết nối ngân hàng</button>
+          </form>
+          <form id="display-form" class="display-options">
+            <fieldset>
+              <legend>Hiển thị widget <small>— tuỳ chọn của <code>GPMPayConnect.open</code></small></legend>
+              <label class="inline"><input type="radio" name="display" value="popup" checked /> Popup</label>
+              <label class="inline"><input type="radio" name="display" value="inline" /> Nhúng vào trang (<code>container</code>)</label>
+              <div class="row">
+                <label>Rộng popup (px) <input name="popupWidth" type="number" min="320" max="720" placeholder="400" /></label>
+                <label>Cao popup (px) <input name="popupHeight" type="number" min="480" max="960" placeholder="640" /></label>
+              </div>
+              <div class="row">
+                <label>Font
+                  <select name="fontFamily">
+                    <option value="">Mặc định (font hệ thống)</option>
+                    <option>Be Vietnam Pro</option>
+                    <option>Inter</option>
+                    <option>Roboto</option>
+                    <option>Nunito</option>
+                  </select>
+                </label>
+                <label>Cỡ chữ (px) <input name="fontSize" type="number" min="12" max="20" placeholder="15" /></label>
+              </div>
+            </fieldset>
+          </form>
+        </section>
+
+        <section class="wide" id="inline-section" hidden>
+          <h2>Widget nhúng trong trang</h2>
+          <div id="inline-widget"></div>
+        </section>
+
+        <section>
+          <h2>Nhật ký callback</h2>
+          <ol id="callback-log" class="log"></ol>
+        </section>
+      </div>
+
+      <div class="panel" id="tab-accounts" role="tabpanel" hidden>
+        <section class="wide">
+          <h2>Tài khoản ngân hàng <button class="small" data-reload="accounts">Tải lại</button></h2>
+          <form id="expiry-filter" class="filter">
+            <label class="inline">Hết hạn trước hoặc trong ngày <input type="date" name="expiresBefore" /></label>
+            <button type="submit" class="small">Lọc</button>
+            <button type="reset" class="small">Bỏ lọc</button>
+            <span class="hint">Gửi <code>GET /partner/bank-accounts?expiresBefore=…</code> — gồm cả STK đã hết hạn, sắp theo hạn, để chủ động tạo bill gia hạn.</span>
+          </form>
+          <table>
+            <thead>
+              <tr><th>Email</th><th>STK</th><th>Nền tảng</th><th>Trạng thái</th><th>Hạn</th><th></th></tr>
+            </thead>
+            <tbody id="accounts"></tbody>
+          </table>
+        </section>
+      </div>
+
+      <div class="panel" id="tab-billing" role="tabpanel" hidden>
+        <section class="wide">
+          <h2>
+            Bill đang chờ <button class="small" data-reload="bills">Tải lại</button>
+            <button class="small" data-merge="1">Gộp bill đã chọn</button>
+          </h2>
+          <p class="hint">Tick các bill rồi bấm "Gộp bill đã chọn" để chuyển khoản một lần (<code>POST /partner/batch-orders</code>).</p>
+          <table>
+            <thead>
+              <tr><th></th><th>Mã</th><th>STK</th><th>Giá gói</th><th>Giảm</th><th>Phải trả</th><th>Gói</th><th></th></tr>
+            </thead>
+            <tbody id="bills"></tbody>
+          </table>
+          <div id="bill-detail"></div>
+        </section>
+
+        <section class="wide">
+          <h2>Bill gộp đang chờ <button class="small" data-reload="batches">Tải lại</button></h2>
+          <table>
+            <thead>
+              <tr><th>Mã</th><th>Số bill</th><th>Phải trả</th><th>Tạo lúc</th><th></th></tr>
+            </thead>
+            <tbody id="batches"></tbody>
+          </table>
+        </section>
+      </div>
+
+      <div class="panel" id="tab-webhooks" role="tabpanel" hidden>
+        <section class="wide">
+          <h2>Webhook nhận được</h2>
+          <ol id="webhooks" class="log"></ol>
+        </section>
+      </div>
+    </main>
+
+    <dialog id="plan-dialog">
+      <form method="dialog">
+        <h2><span id="plan-dialog-title"></span> <small id="plan-dialog-account"></small></h2>
+        <p class="hint" id="plan-dialog-hint"></p>
+        <div id="plan-dialog-picker" class="choices"></div>
+        <div class="dialog-actions">
+          <button value="cancel" class="secondary" formnovalidate>Huỷ</button>
+          <button value="save" id="plan-dialog-ok"></button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

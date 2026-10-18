@@ -1,0 +1,17 @@
+{
+  "name": "gpmpay-demo-widget-connect",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Đối tác mẫu nhúng GPMPay Widget connect — người dùng kết nối ngân hàng ngay trên nền tảng đối tác",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --env-file=.env --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
