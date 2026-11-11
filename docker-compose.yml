@@ -1,0 +1,24 @@
+# Chạy trên server sandbox, sau Traefik dùng chung (network ngoài `traefik`).
+# Router/service đặt tiền tố riêng để không đè cấu hình dự án khác.
+services:
+  gpmpay-demo-widget-connect:
+    build: .
+    image: gpmpay/demo-widget-connect:latest
+    container_name: gpmpay-demo-widget-connect
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PUBLIC_URL: https://${HOST_DEMO:-widget-connect-demo.gpmpay.com}
+    networks: [traefik]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.gpmpay-demo-widget-connect.rule=Host(`${HOST_DEMO:-widget-connect-demo.gpmpay.com}`)"
+      - "traefik.http.routers.gpmpay-demo-widget-connect.entrypoints=websecure"
+      - "traefik.http.routers.gpmpay-demo-widget-connect.tls=true"
+      - "traefik.http.routers.gpmpay-demo-widget-connect.tls.certresolver=le"
+      - "traefik.http.services.gpmpay-demo-widget-connect.loadbalancer.server.port=4000"
+
+networks:
+  traefik:
+    external: true

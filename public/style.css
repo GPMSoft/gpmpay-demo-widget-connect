@@ -23,13 +23,13 @@ main { padding: 16px; }
 #inline-widget { max-width: 480px; }
 .filter { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .filter label { margin: 0; }
-.filter input { padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.filter input, .filter select { padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
 section { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
 section.wide { grid-column: 1 / -1; overflow-x: auto; }
 h2 { margin: 0 0 12px; font-size: 16px; display: flex; gap: 8px; align-items: center; }
 label { display: block; margin-bottom: 8px; }
 label input, label select { display: block; width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
-label.inline input { display: inline; width: auto; }
+label.inline input, label.inline select { display: inline; width: auto; vertical-align: middle; }
 button { padding: 8px 14px; border: 0; border-radius: 6px; background: var(--brand); color: #fff; font: inherit; cursor: pointer; }
 button.small { padding: 2px 8px; font-size: 13px; background: #e2e8f0; color: var(--ink); }
 button.danger { background: #b91c1c; }
@@ -61,3 +61,22 @@ dialog::backdrop { background: rgb(15 23 42 / 0.4); }
 dialog h2 small { color: var(--muted); font-weight: normal; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 #bill-detail img { max-width: 220px; display: block; margin-top: 8px; }
+/* auto-fit không gộp cột trống khi có khối .wide trải hết hàng → giữ cố định 2 cột. */
+#tab-connect { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 720px) { #tab-connect { grid-template-columns: 1fr; } }
+.combo { position: relative; display: flex; align-items: center; gap: 6px; }
+.combo-box { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 320px; padding: 2px 4px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.combo-box:focus-within { border-color: var(--brand); }
+.combo-box input { flex: 1; min-width: 120px; padding: 2px 4px; border: 0; outline: 0; font: inherit; }
+.chips { display: contents; }
+.chip { display: inline-flex; align-items: center; gap: 2px; padding: 0 2px 0 8px; border-radius: 999px; background: #f0fdfa; color: var(--brand); font-size: 13px; }
+.chip button { padding: 0 6px; background: none; color: inherit; font-size: 14px; line-height: 1.4; }
+.combo-list { position: absolute; top: 100%; left: 0; min-width: 100%; width: max-content; max-width: min(520px, calc(100vw - 32px)); z-index: 10; margin: 4px 0 0; padding: 4px 0; list-style: none; max-height: 260px; overflow: auto; background: #fff; border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 16px rgb(15 23 42 / 0.12); }
+.combo-list li { position: relative; display: flex; flex-direction: column; padding: 6px 12px 6px 28px; cursor: pointer; }
+.combo-list li small { color: var(--muted); font-size: 12px; }
+.combo-list li[aria-selected="true"] { font-weight: 600; }
+.combo-list li[aria-selected="true"]::before { content: "✓"; position: absolute; left: 10px; top: 6px; color: var(--brand); }
+.combo-list li.active { background: #f1f5f9; }
+.combo-list .empty { padding-left: 12px; cursor: default; }
+section.wide.has-combo { overflow: visible; }
+.table-scroll { overflow-x: auto; }

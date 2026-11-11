@@ -43,7 +43,7 @@ npm run dev            # http://localhost:4000
 
 ## Trang demo có gì
 
-Trang chia 4 tab (tab đang mở được nhớ trên URL, ví dụ `#billing`):
+Trang chia 5 tab (tab đang mở được nhớ trên URL, ví dụ `#billing`):
 
 1. **Kết nối**
    - Nhập email/tên/SĐT → server tạo phiên (`POST /partner/connect-sessions`) → mở widget. Trong widget người dùng chọn
@@ -51,11 +51,20 @@ Trang chia 4 tab (tab đang mở được nhớ trên URL, ví dụ `#billing`):
    - Kết nối không tạo bill. STK đủ điều kiện dùng thử được cấp hạn dùng thử;
      STK còn lại chưa có hạn cho tới khi đối tác tạo bill gia hạn và thanh toán.
    - **Nhật ký callback**: `onSuccess`, `onExit`, `onEvent` theo thời gian thực.
+   - **Phiên kết nối**: server lưu `sessionId` trả về từ `POST /partner/connect-sessions`
+     (đối tác thật lưu cùng mã khách/quán của mình). Nút **Tra cứu** gọi
+     `GET /partner/connect-sessions/:id` để lấy kết quả chính thức (`PENDING` /
+     `OPENED` / `COMPLETED` / `EXPIRED`, kèm STK) khi lỡ callback; demo tự tra sau
+     mỗi `onSuccess` / `onExit`.
+   - **Ngân hàng hỗ trợ** (`GET /partner/banks`): kèm mã `bin` để tự dựng VietQR.
 2. **Tài khoản ngân hàng** (`GET /partner/bank-accounts`)
    - Lọc **"Hết hạn trước hoặc trong ngày"** (`expiresBefore`): STK sắp hết hạn tới ngày chọn, kể cả STK đã hết hạn, sắp theo hạn — để chủ động gia hạn.
    - Mỗi STK: **tạo bill gia hạn** (hộp chọn gói của đúng ngân hàng STK, gửi
      `planId` tới `POST /partner/bank-accounts/:id/bills`, hiện luôn QR), huỷ kết nối (mở widget ở chế độ huỷ).
-3. **Thanh toán**
+3. **Giao dịch** (`GET /partner/transactions`): lọc nhiều STK cùng lúc
+   (`bankAccountId=id1,id2`, tối đa 100), chiều tiền (`transferType=in|out`), nguồn
+   (`source=REAL|SIMULATED`) và khoảng ngày (`startDate`, `endDate`).
+4. **Thanh toán**
    - **Bill đang chờ** (`GET /partner/bills`): số tiền, giảm giá, mã
      `GPAY######`, QR chuyển khoản.
      Tick nhiều bill rồi bấm **Gộp bill đã chọn** để tạo bill gộp (`POST /partner/batch-orders`, 2–200 bill).
@@ -63,7 +72,7 @@ Trang chia 4 tab (tab đang mở được nhớ trên URL, ví dụ `#billing`):
      bill, tổng tiền, QR chuyển khoản một lần cho cả nhóm, nút giả lập thanh
      toán và huỷ gộp (bill con trở lại bill lẻ). Bill con trong bill gộp đang
      chờ không trả lẻ được.
-4. **Webhook**: payload `POST /webhook` của demo nhận được, kèm kết quả kiểm chữ
+5. **Webhook**: payload `POST /webhook` của demo nhận được, kèm kết quả kiểm chữ
    ký.
 
 ## Nhúng widget vào trang của bạn
@@ -73,7 +82,7 @@ Trang chia 4 tab (tab đang mở được nhớ trên URL, ví dụ `#billing`):
 <script>
   GPMPayConnect.open({
     token: linkToken, // lấy từ server của bạn
-    onSuccess: ({ bankAccountId, status, trial, disconnected }) => {},
+    onSuccess: ({ sessionId, bankAccountId, status, trial, disconnected }) => {},
     onExit: ({ reason }) => {}, // user_closed | contact_admin | invalid_token | error
     onEvent: (name, data) => {},
   });

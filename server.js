@@ -8,8 +8,18 @@ const WIDGET_SCRIPT_URL =
   process.env.WIDGET_SCRIPT_URL || "https://sandbox-widget-connect.gpmpay.com/v1/connect.js";
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 const MAX_WEBHOOKS = 50;
+const MAX_SESSIONS = 50;
+const TRANSACTION_FILTERS = ["bankAccountId", "transferType", "source", "startDate", "endDate"];
 
 const webhooks = [];
+// Đối tác thật lưu sessionId cùng mã khách/quán của mình trong DB để biết STK kết nối xong thuộc về ai.
+const sessions = [];
+
+function rememberSession(session, details) {
+  sessions.unshift({ ...details, sessionId: session.sessionId, createdAt: new Date().toISOString() });
+  sessions.length = Math.min(sessions.length, MAX_SESSIONS);
+  return session;
+}
 const app = express();
 
 // Đọc body thô để kiểm chữ ký — phải đặt TRƯỚC express.json().
@@ -64,8 +74,8 @@ app.get(
 
 app.post(
   "/api/connect",
-  route(({ body }) =>
-    partnerApi("POST", "/connect-sessions", {
+  route(async ({ body }) => {
+    const session = await partnerApi("POST", "/connect-sessions", {
       email: body.email,
       name: body.name || undefined,
       phone: body.phone || undefined,
@@ -80,18 +90,37 @@ app.post(
             },
           }
         : {}),
-    }),
-  ),
+    });
+    return rememberSession(session, { mode: "CONNECT", email: body.email });
+  }),
 );
 
 app.post(
   "/api/disconnect",
-  route(({ body }) =>
-    partnerApi("POST", "/disconnect-sessions", {
-      bankAccountId: body.bankAccountId,
-      origin: PUBLIC_URL,
-    }),
+  route(async ({ body }) =>
+    rememberSession(
+      await partnerApi("POST", "/disconnect-sessions", {
+        bankAccountId: body.bankAccountId,
+        origin: PUBLIC_URL,
+      }),
+      { mode: "DISCONNECT", bankAccountId: body.bankAccountId },
+    ),
   ),
+);
+app.get("/api/sessions", (_req, res) => res.json(sessions));
+app.get(
+  "/api/connect-sessions/:id",
+  route(({ params }) => partnerApi("GET", `/connect-sessions/${params.id}`)),
+);
+app.get(
+  "/api/transactions",
+  route(({ query }) => {
+    const search = new URLSearchParams({ limit: "50" });
+    for (const key of TRANSACTION_FILTERS) {
+      if (query[key]) search.set(key, String(query[key]));
+    }
+    return partnerApi("GET", `/transactions?${search}`);
+  }),
 );
 
 app.get(

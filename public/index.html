@@ -16,6 +16,7 @@
     <nav class="tabs" role="tablist">
       <button type="button" role="tab" data-tab="connect">Kết nối</button>
       <button type="button" role="tab" data-tab="accounts">Tài khoản ngân hàng</button>
+      <button type="button" role="tab" data-tab="transactions">Giao dịch</button>
       <button type="button" role="tab" data-tab="billing">Thanh toán</button>
       <button type="button" role="tab" data-tab="webhooks">Webhook</button>
     </nav>
@@ -65,6 +66,72 @@
         <section>
           <h2>Nhật ký callback</h2>
           <ol id="callback-log" class="log"></ol>
+        </section>
+
+        <section class="wide">
+          <h2>Phiên kết nối <button class="small" data-reload="sessions">Tải lại</button></h2>
+          <p class="hint">Server lưu <code>sessionId</code> trả về từ <code>POST /partner/connect-sessions</code> cùng khách của mình; <code>onSuccess</code> cũng trả <code>sessionId</code>. Lỡ callback (người dùng đóng widget, mất mạng…) thì tra kết quả chính thức bằng <code>GET /partner/connect-sessions/:id</code>.</p>
+          <table>
+            <thead>
+              <tr><th>Tạo lúc</th><th>Chế độ</th><th>Khách / STK</th><th>sessionId</th><th>Trạng thái</th><th></th></tr>
+            </thead>
+            <tbody id="sessions"></tbody>
+          </table>
+        </section>
+
+        <section class="wide">
+          <h2>Ngân hàng hỗ trợ</h2>
+          <p class="hint"><code>GET /partner/banks</code> trả kèm mã <code>bin</code> để tự dựng chuỗi VietQR cho STK hoặc VA.</p>
+          <table>
+            <thead>
+              <tr><th>Mã</th><th>Tên</th><th>BIN</th><th>Gói</th></tr>
+            </thead>
+            <tbody id="banks"></tbody>
+          </table>
+        </section>
+      </div>
+
+      <div class="panel" id="tab-transactions" role="tabpanel" hidden>
+        <section class="wide has-combo">
+          <h2>Giao dịch <button class="small" data-reload="transactions">Tải lại</button></h2>
+          <form id="transaction-filter" class="filter">
+            <div class="combo" id="account-combo">
+              <span id="account-combo-label">STK</span>
+              <div class="combo-box">
+                <span class="chips" id="account-chips"></span>
+                <input type="search" id="account-search" placeholder="Tất cả — gõ để tìm STK, ngân hàng, email" autocomplete="off"
+                  role="combobox" aria-labelledby="account-combo-label" aria-expanded="false" aria-controls="account-options" />
+              </div>
+              <ul class="combo-list" id="account-options" role="listbox" aria-multiselectable="true" hidden></ul>
+            </div>
+            <label class="inline">Chiều
+              <select name="transferType">
+                <option value="">Tất cả</option>
+                <option value="in">Tiền vào</option>
+                <option value="out">Tiền ra</option>
+              </select>
+            </label>
+            <label class="inline">Nguồn
+              <select name="source">
+                <option value="">Tất cả</option>
+                <option value="REAL">Thật</option>
+                <option value="SIMULATED">Giả lập</option>
+              </select>
+            </label>
+            <label class="inline">Từ ngày <input type="date" name="from" /></label>
+            <label class="inline">Đến ngày <input type="date" name="to" /></label>
+            <button type="submit" class="small">Lọc</button>
+            <button type="reset" class="small">Bỏ lọc</button>
+          </form>
+          <p class="hint">Gửi <code>GET /partner/transactions?bankAccountId=id1,id2&amp;transferType=in&amp;source=REAL&amp;startDate=…&amp;endDate=…</code> — chọn được nhiều STK.</p>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Thời gian</th><th>STK</th><th>Chiều</th><th>Số tiền</th><th>Nội dung</th><th>Mã GD</th><th>Nguồn</th></tr>
+              </thead>
+              <tbody id="transactions"></tbody>
+            </table>
+          </div>
         </section>
       </div>
 

@@ -1,6 +1,8 @@
 const $ = (selector) => document.querySelector(selector);
 let config = { sandbox: false };
 let banks = [];
+let accounts = [];
+const sessionResults = new Map();
 
 async function call(method, url, body) {
   const res = await fetch(url, {
@@ -51,6 +53,16 @@ function renderPlans(container, bank, inputName) {
 
 async function loadBanks() {
   banks = await call("GET", "/api/banks");
+  $("#banks").innerHTML = banks
+    .map(
+      (b) => `<tr>
+        <td>${escape(b.code)}</td>
+        <td>${escape(b.name)}</td>
+        <td><code>${escape(b.bin)}</code></td>
+        <td>${b.plans.map((p) => `${p.planMonths} tháng`).join(", ") || "—"}</td>
+      </tr>`,
+    )
+    .join("");
 }
 
 /** Hộp chọn gói cho một STK; chỉ hiện gói của đúng ngân hàng STK đó. */
@@ -99,7 +111,7 @@ function displayOptions() {
   };
 }
 
-function openWidget(linkToken) {
+function openWidget(linkToken, sessionId) {
   const options = displayOptions();
   if (options.container) $("#inline-section").scrollIntoView({ behavior: "smooth" });
   window.GPMPayConnect.open({
@@ -109,10 +121,13 @@ function openWidget(linkToken) {
       log("onSuccess", result);
       $("#inline-section").hidden = true;
       reloadAll();
+      checkSession(sessionId);
     },
+    // Người dùng có thể đóng widget sau khi đã kết nối xong: tra lại phiên để biết kết quả thật.
     onExit: (exit) => {
       log("onExit", exit);
       $("#inline-section").hidden = true;
+      checkSession(sessionId);
     },
     onEvent: (name, data) => log(`onEvent:${name}`, data),
   });
@@ -122,13 +137,15 @@ $("#connect-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = new FormData(event.target);
   try {
-    const { linkToken } = await call("POST", "/api/connect", {
+    const { linkToken, sessionId } = await call("POST", "/api/connect", {
       email: form.get("email"),
       name: form.get("name"),
       phone: form.get("phone"),
       autoWebhook: form.get("autoWebhook") === "on",
     });
-    openWidget(linkToken);
+    log("Đã tạo phiên", { sessionId });
+    loadSessions().catch((err) => log("Lỗi tải", err.message));
+    openWidget(linkToken, sessionId);
   } catch (err) {
     log("Lỗi tạo phiên", err.message);
     alert(err.message);
@@ -143,6 +160,7 @@ async function loadAccounts() {
   // Hết ngày đã chọn theo giờ Việt Nam.
   const query = day ? `?expiresBefore=${encodeURIComponent(`${day}T23:59:59.999+07:00`)}` : "";
   const { data } = await call("GET", `/api/bank-accounts${query}`);
+  if (!day) fillTransactionAccounts(data);
   $("#accounts").innerHTML = data
     .map(
       (a) => `<tr>
@@ -162,6 +180,136 @@ async function loadAccounts() {
       </tr>`,
     )
     .join("");
+}
+
+const selectedAccounts = new Set();
+let activeOption = 0;
+
+function fillTransactionAccounts(data) {
+  accounts = data;
+  renderAccountCombo();
+}
+
+const accountText = (a) =>
+  `${a.bank.code} ${a.bank.shortName} ${a.accountNumber} ${a.ownerName} ${a.user.email}`.toLowerCase();
+
+function filteredAccounts() {
+  const words = $("#account-search").value.toLowerCase().split(/\s+/).filter(Boolean);
+  return accounts.filter((a) => words.every((w) => accountText(a).includes(w)));
+}
+
+function renderAccountCombo() {
+  $("#account-chips").innerHTML = [...selectedAccounts]
+    .map(
+      (id) =>
+        `<span class="chip">${escape(accountLabel(id))}<button type="button" data-unselect="${escape(id)}" aria-label="Bỏ chọn">×</button></span>`,
+    )
+    .join("");
+  $("#account-search").placeholder = selectedAccounts.size ? "Thêm STK…" : "Tất cả — gõ để tìm STK, ngân hàng, email";
+  const options = filteredAccounts();
+  activeOption = Math.min(activeOption, Math.max(options.length - 1, 0));
+  $("#account-options").innerHTML = options.length
+    ? options
+        .map(
+          (a, i) =>
+            `<li role="option" id="account-option-${i}" data-account="${a.id}" aria-selected="${selectedAccounts.has(a.id)}" class="${i === activeOption ? "active" : ""}">
+              <span>${escape(a.bank.code)} ${escape(a.accountNumber)}${a.deletedAt ? " (đã huỷ)" : ""}</span>
+              <small>${escape(a.ownerName)} · ${escape(a.user.email)}</small>
+            </li>`,
+        )
+        .join("")
+    : '<li class="empty">Không có STK phù hợp</li>';
+  $("#account-search").setAttribute("aria-activedescendant", options.length ? `account-option-${activeOption}` : "");
+}
+
+function toggleAccountList(open) {
+  $("#account-options").hidden = !open;
+  $("#account-search").setAttribute("aria-expanded", String(open));
+}
+
+function toggleAccount(id) {
+  if (selectedAccounts.has(id)) selectedAccounts.delete(id);
+  else selectedAccounts.add(id);
+  $("#account-search").value = "";
+  renderAccountCombo();
+}
+
+const accountLabel = (id) => {
+  const a = accounts.find((x) => x.id === id);
+  return a ? `${a.bank.code} ${a.accountNumber}` : id;
+};
+
+async function loadTransactions() {
+  const form = new FormData($("#transaction-filter"));
+  const query = new URLSearchParams();
+  if (selectedAccounts.size) query.set("bankAccountId", [...selectedAccounts].join(","));
+  for (const key of ["transferType", "source"]) {
+    if (form.get(key)) query.set(key, form.get(key));
+  }
+  // Mốc ngày theo giờ Việt Nam.
+  if (form.get("from")) query.set("startDate", `${form.get("from")}T00:00:00+07:00`);
+  if (form.get("to")) query.set("endDate", `${form.get("to")}T23:59:59.999+07:00`);
+  const { data } = await call("GET", `/api/transactions?${query}`);
+  $("#transactions").innerHTML = data.length
+    ? data
+        .map(
+          (t) => `<tr>
+        <td>${date(t.transactionTime)}</td>
+        <td>${escape(accountLabel(t.bankAccountId))}</td>
+        <td>${t.type === "IN" ? '<span class="ok">vào</span>' : '<span class="bad">ra</span>'}</td>
+        <td><strong>${money(t.amount)}</strong></td>
+        <td>${escape(t.transferContent)}</td>
+        <td><code>${escape(t.referenceCode)}</code></td>
+        <td>${escape(t.source)}</td>
+      </tr>`,
+        )
+        .join("")
+    : '<tr><td colspan="7" class="empty">Không có giao dịch.</td></tr>';
+}
+
+const SESSION_STATUS_LABEL = {
+  PENDING: "Chưa mở widget",
+  OPENED: "Đang mở",
+  COMPLETED: '<span class="ok">Hoàn tất</span>',
+  EXPIRED: '<span class="bad">Hết hạn</span>',
+};
+
+function sessionStatusCell(sessionId) {
+  const result = sessionResults.get(sessionId);
+  if (!result) return "—";
+  const account = result.bankAccount
+    ? `<br><small>${escape(result.bankAccount.bank.code)} ${escape(result.bankAccount.accountNumber)} · ${escape(result.bankAccount.status)}${result.bankAccount.deletedAt ? " · đã huỷ" : ""}</small>`
+    : "";
+  return `${SESSION_STATUS_LABEL[result.status] ?? escape(result.status)}${account}`;
+}
+
+async function loadSessions() {
+  const items = await call("GET", "/api/sessions");
+  $("#sessions").innerHTML = items
+    .map(
+      (s) => `<tr>
+        <td>${date(s.createdAt)}</td>
+        <td>${s.mode === "CONNECT" ? "Kết nối" : "Huỷ"}</td>
+        <td>${escape(s.email ?? accountLabel(s.bankAccountId))}</td>
+        <td><code>${escape(s.sessionId)}</code></td>
+        <td data-session-status="${escape(s.sessionId)}">${sessionStatusCell(s.sessionId)}</td>
+        <td><button class="small" data-check-session="${escape(s.sessionId)}">Tra cứu</button></td>
+      </tr>`,
+    )
+    .join("");
+}
+
+async function checkSession(sessionId) {
+  if (!sessionId) return;
+  try {
+    const result = await call("GET", `/api/connect-sessions/${sessionId}`);
+    sessionResults.set(sessionId, result);
+    log("GET /partner/connect-sessions/:id", { id: result.id, status: result.status, bankAccountId: result.bankAccountId });
+    const cell = document.querySelector(`[data-session-status="${CSS.escape(sessionId)}"]`);
+    if (cell) cell.innerHTML = sessionStatusCell(sessionId);
+  } catch (err) {
+    log("Lỗi tra phiên", err.message);
+  }
 }
 
 async function loadBills() {
@@ -219,7 +367,13 @@ async function loadWebhooks() {
     .join("");
 }
 
-const loaders = { accounts: loadAccounts, bills: loadBills, batches: loadBatches };
+const loaders = {
+  accounts: loadAccounts,
+  bills: loadBills,
+  batches: loadBatches,
+  sessions: loadSessions,
+  transactions: loadTransactions,
+};
 
 function showTab(name) {
   for (const button of document.querySelectorAll("[data-tab]")) {
@@ -238,6 +392,59 @@ for (const button of document.querySelectorAll("[data-tab]")) {
 }
 showTab(document.querySelector(`[data-tab="${location.hash.slice(1)}"]`) ? location.hash.slice(1) : "connect");
 
+$("#transaction-filter").addEventListener("submit", (event) => {
+  event.preventDefault();
+  loadTransactions().catch((err) => log("Lỗi tải", err.message));
+});
+$("#transaction-filter").addEventListener("reset", () => {
+  selectedAccounts.clear();
+  setTimeout(() => {
+    renderAccountCombo();
+    loadTransactions().catch((err) => log("Lỗi tải", err.message));
+  });
+});
+
+$("#account-search").addEventListener("focus", () => toggleAccountList(true));
+$("#account-search").addEventListener("input", () => {
+  activeOption = 0;
+  renderAccountCombo();
+  toggleAccountList(true);
+});
+$("#account-search").addEventListener("keydown", (event) => {
+  const options = filteredAccounts();
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    toggleAccountList(true);
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    activeOption = (activeOption + step + options.length) % Math.max(options.length, 1);
+    renderAccountCombo();
+    $("#account-options .active")?.scrollIntoView({ block: "nearest" });
+  } else if (event.key === "Enter") {
+    // Enter khi danh sách mở là chọn STK, không submit form lọc.
+    if ($("#account-options").hidden || !options[activeOption]) return;
+    event.preventDefault();
+    toggleAccount(options[activeOption].id);
+  } else if (event.key === "Escape") {
+    toggleAccountList(false);
+  } else if (event.key === "Backspace" && !event.target.value && selectedAccounts.size) {
+    selectedAccounts.delete([...selectedAccounts].at(-1));
+    renderAccountCombo();
+  }
+});
+// mousedown thay vì click: giữ focus ở ô tìm kiếm để chọn liên tiếp nhiều STK.
+$("#account-options").addEventListener("mousedown", (event) => {
+  event.preventDefault();
+  const li = event.target.closest("[data-account]");
+  if (li) toggleAccount(li.dataset.account);
+});
+$("#account-chips").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-unselect]");
+  if (button) toggleAccount(button.dataset.unselect);
+});
+document.addEventListener("click", (event) => {
+  if (!$("#account-combo").contains(event.target)) toggleAccountList(false);
+});
+
 $("#expiry-filter").addEventListener("submit", (event) => {
   event.preventDefault();
   loadAccounts().catch((err) => log("Lỗi tải", err.message));
@@ -255,7 +462,12 @@ function showBill(bill) {
 }
 
 function reloadAll() {
-  for (const load of Object.values(loaders)) load().catch((err) => log("Lỗi tải", err.message));
+  const fail = (err) => log("Lỗi tải", err.message);
+  for (const load of [loadBills, loadBatches, loadSessions]) load().catch(fail);
+  // Bảng giao dịch cần danh sách STK để hiện số tài khoản thay cho id.
+  loadAccounts()
+    .catch(fail)
+    .finally(() => loadTransactions().catch(fail));
 }
 
 document.addEventListener("click", async (event) => {
@@ -280,8 +492,12 @@ document.addEventListener("click", async (event) => {
       showBill(bill);
     }
     if (el.dataset.disconnect) {
-      const { linkToken } = await call("POST", "/api/disconnect", { bankAccountId: el.dataset.disconnect });
-      openWidget(linkToken);
+      const { linkToken, sessionId } = await call("POST", "/api/disconnect", { bankAccountId: el.dataset.disconnect });
+      loadSessions().catch((err) => log("Lỗi tải", err.message));
+      openWidget(linkToken, sessionId);
+    }
+    if (el.dataset.checkSession) {
+      await checkSession(el.dataset.checkSession);
     }
     if (el.dataset.bill) {
       showBill(await call("GET", `/api/bills/${el.dataset.bill}`));
