@@ -88,6 +88,27 @@ function pickPlan(account, { title, hint, okText }) {
   });
 }
 
+function askSimulation(account) {
+  const dialog = $("#simulate-dialog");
+  $("#simulate-dialog-account").textContent = `${account.bankCode} ${account.accountNumber}`;
+  dialog.returnValue = "";
+  dialog.showModal();
+  return new Promise((resolve) => {
+    dialog.addEventListener(
+      "close",
+      () => {
+        const form = new FormData(dialog.querySelector("form"));
+        resolve(
+          dialog.returnValue === "save"
+            ? { type: form.get("type"), amount: form.get("amount"), transferContent: form.get("transferContent") }
+            : null,
+        );
+      },
+      { once: true },
+    );
+  });
+}
+
 /** Mở widget bằng link_token server vừa tạo; kết quả báo về qua callback. */
 /** Đọc tuỳ chọn hiển thị: popup (có thể chỉnh kích thước) hoặc nhúng, font và cỡ chữ. */
 function displayOptions() {
@@ -174,6 +195,7 @@ async function loadAccounts() {
             ? ""
             : `<div class="actions">
                 <button class="small" data-create-bill="${a.id}" ${accountData(a)}>Tạo bill gia hạn</button>
+                ${config.paymentSimulation ? `<button class="small" data-simulate="${a.id}" ${accountData(a)}>Giả lập giao dịch</button>` : ""}
                 <button class="small danger" data-disconnect="${a.id}">Huỷ kết nối</button>
               </div>`
         }</td>
@@ -490,6 +512,14 @@ document.addEventListener("click", async (event) => {
       log("Đã tạo bill", { code: bill.code, amount: bill.amount, planMonths: bill.planMonths });
       reloadAll();
       showBill(bill);
+    }
+    if (el.dataset.simulate) {
+      const input = await askSimulation(account);
+      if (!input) return;
+      const tx = await call("POST", `/api/bank-accounts/${el.dataset.simulate}/simulate-transaction`, input);
+      log("Đã giả lập giao dịch", { id: tx.id, type: tx.type, amount: tx.amount, source: tx.source });
+      loadTransactions().catch((err) => log("Lỗi tải", err.message));
+      loadWebhooks().catch((err) => log("Lỗi tải", err.message));
     }
     if (el.dataset.disconnect) {
       const { linkToken, sessionId } = await call("POST", "/api/disconnect", { bankAccountId: el.dataset.disconnect });

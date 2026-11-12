@@ -200,6 +200,25 @@
       </form>
     </dialog>
 
+    <dialog id="simulate-dialog">
+      <form method="dialog">
+        <h2>Giả lập giao dịch <small id="simulate-dialog-account"></small></h2>
+        <p class="hint">Gửi <code>POST /partner/simulator/transactions</code>. Giao dịch mang <code>source: SIMULATED</code> và bắn tới webhook bật <code>fireOnSimulated</code> — xem ở tab Giao dịch và Webhook.</p>
+        <label>Chiều
+          <select name="type">
+            <option value="IN">Tiền vào</option>
+            <option value="OUT">Tiền ra</option>
+          </select>
+        </label>
+        <label>Số tiền (đ) <input name="amount" type="number" min="1" step="1" required value="50000" /></label>
+        <label>Nội dung chuyển khoản <input name="transferContent" required maxlength="100" value="Thanh toan don hang DH001" /></label>
+        <div class="dialog-actions">
+          <button value="cancel" class="secondary" formnovalidate>Huỷ</button>
+          <button value="save">Giả lập</button>
+        </div>
+      </form>
+    </dialog>
+
     <script src="/app.js"></script>
   </body>
 </html>

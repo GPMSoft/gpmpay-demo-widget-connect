@@ -61,6 +61,9 @@ Trang chia 5 tab (tab đang mở được nhớ trên URL, ví dụ `#billing`):
    - Lọc **"Hết hạn trước hoặc trong ngày"** (`expiresBefore`): STK sắp hết hạn tới ngày chọn, kể cả STK đã hết hạn, sắp theo hạn — để chủ động gia hạn.
    - Mỗi STK: **tạo bill gia hạn** (hộp chọn gói của đúng ngân hàng STK, gửi
      `planId` tới `POST /partner/bank-accounts/:id/bills`, hiện luôn QR), huỷ kết nối (mở widget ở chế độ huỷ).
+   - Khi bật `PAYMENT_SIMULATION`: nút **Giả lập giao dịch** cho từng STK (`POST
+     /partner/simulator/transactions`) — chọn chiều, số tiền, nội dung; giao dịch
+     mang `source: SIMULATED` và bắn webhook như giao dịch thật.
 3. **Giao dịch** (`GET /partner/transactions`): lọc nhiều STK cùng lúc
    (`bankAccountId=id1,id2`, tối đa 100), chiều tiền (`transferType=in|out`), nguồn
    (`source=REAL|SIMULATED`) và khoảng ngày (`startDate`, `endDate`).

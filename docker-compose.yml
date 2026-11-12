@@ -8,12 +8,12 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      PUBLIC_URL: https://${HOST_DEMO:-widget-connect-demo.gpmpay.com}
+      PUBLIC_URL: https://${HOST_DEMO:-demo-widget-connect.gpmpay.com}
     networks: [traefik]
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.gpmpay-demo-widget-connect.rule=Host(`${HOST_DEMO:-widget-connect-demo.gpmpay.com}`)"
+      - "traefik.http.routers.gpmpay-demo-widget-connect.rule=Host(`${HOST_DEMO:-demo-widget-connect.gpmpay.com}`)"
       - "traefik.http.routers.gpmpay-demo-widget-connect.entrypoints=websecure"
       - "traefik.http.routers.gpmpay-demo-widget-connect.tls=true"
       - "traefik.http.routers.gpmpay-demo-widget-connect.tls.certresolver=le"

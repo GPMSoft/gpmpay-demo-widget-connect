@@ -140,6 +140,17 @@ app.post(
     partnerApi("POST", `/bank-accounts/${params.id}/bills`, { planId: body.planId }),
   ),
 );
+app.post(
+  "/api/bank-accounts/:id/simulate-transaction",
+  route(({ params, body }) =>
+    partnerApi("POST", "/simulator/transactions", {
+      bankAccountId: params.id,
+      type: body.type,
+      amount: Number(body.amount),
+      transferContent: body.transferContent,
+    }),
+  ),
+);
 app.get(
   "/api/bills",
   route(({ query }) => partnerApi("GET", `/bills?status=${query.status || "PENDING"}&limit=50`)),
