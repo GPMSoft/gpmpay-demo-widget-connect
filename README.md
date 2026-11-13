@@ -40,6 +40,8 @@ npm run dev            # http://localhost:4000
   tunnel (`cloudflared tunnel --url http://localhost:4000`) rồi đặt `PUBLIC_URL`
   là URL tunnel và khai URL đó vào `allowedOrigins`.
 - OTP test: Liên hệ admin GPMPay
+- Link **Video hướng dẫn / Mã nguồn / Tài liệu** ở đầu trang lấy từ `GUIDE_VIDEO_URL`,
+  `SOURCE_CODE_URL`, `DOCS_URL` trong `.env` (để trống thì ẩn; chỉ nhận `http(s)://`).
 
 ## Trang demo có gì
 

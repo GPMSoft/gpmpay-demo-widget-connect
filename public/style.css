@@ -11,6 +11,14 @@ header { padding: 16px; background: #fff; border-bottom: 1px solid var(--line); 
 header h1 { margin: 0; font-size: 20px; }
 header small { color: var(--muted); font-weight: normal; }
 header p { margin: 4px 0 0; color: var(--muted); }
+.header-row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.resource-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.resource-links[hidden] { display: none; }
+.resource-links a { padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--brand); text-decoration: none; font-size: 14px; white-space: nowrap; }
+.resource-links a:hover { border-color: var(--brand); background: #f0fdfa; }
+.resource-links a[data-kind="video"]::before { content: "▶ "; }
+.resource-links a[data-kind="source"]::before { content: "</> "; }
+.resource-links a[data-kind="docs"]::before { content: "📄 "; }
 .warning { color: #b45309; font-weight: 600; }
 main { padding: 16px; }
 .tabs { display: flex; gap: 4px; padding: 0 16px; background: #fff; border-bottom: 1px solid var(--line); overflow-x: auto; }

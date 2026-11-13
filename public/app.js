@@ -567,6 +567,14 @@ document.addEventListener("click", async (event) => {
 (async () => {
   config = await call("GET", "/api/config");
   $("#webhook-url").textContent = `${config.publicUrl}/webhook`;
+  const links = config.links || [];
+  $("#resource-links").hidden = !links.length;
+  $("#resource-links").innerHTML = links
+    .map(
+      (l) =>
+        `<a href="${escape(l.url)}" target="_blank" rel="noopener noreferrer" data-kind="${escape(l.key)}">${escape(l.label)}</a>`,
+    )
+    .join("");
   if (!config.hasToken) {
     $("#config-warning").hidden = false;
     $("#config-warning").textContent = "Chưa cấu hình GPMPAY_PARTNER_TOKEN trong .env.";

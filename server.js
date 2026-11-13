@@ -9,6 +9,14 @@ const WIDGET_SCRIPT_URL =
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 const MAX_WEBHOOKS = 50;
 const MAX_SESSIONS = 50;
+// Link hiện trên đầu trang demo; để trống thì ẩn. Chỉ nhận http(s).
+const RESOURCE_LINKS = [
+  ["video", "Video hướng dẫn", process.env.GUIDE_VIDEO_URL],
+  ["source", "Mã nguồn", process.env.SOURCE_CODE_URL],
+  ["docs", "Tài liệu", process.env.DOCS_URL],
+]
+  .filter(([, , url]) => /^https?:\/\//i.test(url?.trim() || ""))
+  .map(([key, label, url]) => ({ key, label, url: url.trim() }));
 const TRANSACTION_FILTERS = ["bankAccountId", "transferType", "source", "startDate", "endDate"];
 
 const webhooks = [];
@@ -64,6 +72,7 @@ app.get(
     publicUrl: PUBLIC_URL,
     paymentSimulation: process.env.PAYMENT_SIMULATION === "true",
     hasToken: Boolean(process.env.GPMPAY_PARTNER_TOKEN),
+    links: RESOURCE_LINKS,
   })),
 );
 
