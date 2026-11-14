@@ -395,6 +395,7 @@ const loaders = {
   batches: loadBatches,
   sessions: loadSessions,
   transactions: loadTransactions,
+  webhooks: loadWebhooks,
 };
 
 function showTab(name) {
@@ -582,6 +583,5 @@ document.addEventListener("click", async (event) => {
   if (!window.GPMPayConnect) log("Lỗi", "Không tải được connect.js — kiểm tra WIDGET_SCRIPT_URL");
   loadBanks().catch((err) => log("Lỗi tải gói", err.message));
   reloadAll();
-  loadWebhooks();
-  setInterval(loadWebhooks, 3000);
+  loadWebhooks().catch((err) => log("Lỗi tải", err.message));
 })();
